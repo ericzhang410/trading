@@ -1,5 +1,10 @@
-#Vol estimator
+import pandas as pd
+import numpy as np
+import yfinance as yf
+import matplotlib.pyplot as plt
+from typing import Iterable, Optional, Union, Mapping, Tuple, Literal
 
-# trading US equities
-# Large cap stocks
-# Sentimental Analysis
+from vol_cone import yz_vol_series
+
+def model_vol(pd.DataFrame):
+    

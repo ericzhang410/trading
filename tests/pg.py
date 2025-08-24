@@ -6,63 +6,43 @@ from typing import Iterable, Optional, Union, Mapping, Tuple, Literal
 import sys
 sys.path.append("../src")
 
-def OHLC_prep(df: pd.DataFrame) -> pd.DataFrame:
-    """
-    Convert intraday AAPL-style quotes into a daily OHLC dataframe.
-
-    Expected columns (any casing; brackets optional):
-      [QUOTE_UNIXTIME], [QUOTE_READTIME], [QUOTE_DATE], [QUOTE_TIME_HOURS], [UNDERLYING_LAST], ...
-
-    Returns
-    -------
-    pd.DataFrame
-        Index: datetime64[ns] normalized to date (name = 'date')
-        Columns: ['open', 'high', 'low', 'close']
-    """
-    # --- work on a copy and normalize headers ---
+def prep_index(df: pd.DataFrame) -> pd.DataFrame:
     out = df.copy()
     out.columns = [c.strip().strip("[]").lower().replace(" ", "_") for c in out.columns]
+    return out
 
-    # --- check required price column ---
-    if "underlying_last" not in out.columns:
-        raise ValueError("Missing required column 'UNDERLYING_LAST' (underlying_last after normalization).")
+def ohlc_index(df:pd.DataFrame) -> pd.DataFrame:
+    copy = prep_index(df)
+    # Build a timestamp from quote_date (+ optional quote_time_hours)
+    if "quote_date" not in copy.columns:
+        raise ValueError(f"No quote_date column. Got: {copy.columns.tolist()}")
 
-    # --- build a timestamp for ordering within each day ---
-    ts = None
-    if "quote_unixtime" in out.columns:
-        ts = pd.to_datetime(out["quote_unixtime"], unit="s", errors="coerce")
-    elif "quote_readtime" in out.columns:
-        ts = pd.to_datetime(out["quote_readtime"], errors="coerce")
-    elif "quote_date" in out.columns and "quote_time_hours" in out.columns:
-        d = pd.to_datetime(out["quote_date"], errors="coerce")
-        h = pd.to_numeric(out["quote_time_hours"], errors="coerce")
-        ts = d + pd.to_timedelta(h.fillna(0) * 3600, unit="s")
-    elif "quote_date" in out.columns:
-        ts = pd.to_datetime(out["quote_date"], errors="coerce")  # midnight fallback
-    else:
-        raise ValueError("Need one of QUOTE_UNIXTIME, QUOTE_READTIME, or QUOTE_DATE (+ optional QUOTE_TIME_HOURS).")
+    ts = pd.to_datetime(copy["quote_date"], errors="coerce")
+    if "quote_time_hours" in copy.columns:
+        ts = ts + pd.to_timedelta(pd.to_numeric(copy["quote_time_hours"], errors="coerce") * 3600, unit="s")
+    copy["__ts"] = ts
 
-    out["__ts"] = ts
-    out = out.dropna(subset=["__ts"])
+    tmp = (
+        copy.dropna(subset=["__ts", "underlying_last"])
+          .assign(__ts=pd.to_datetime(copy["__ts"]))
+          .sort_values("__ts")
+          .set_index("__ts")
+    )
 
-    # --- ensure numeric price and drop missing ---
-    out["underlying_last"] = pd.to_numeric(out["underlying_last"], errors="coerce")
-    out = out.dropna(subset=["underlying_last"])
+    # Group into 1-day buckets and compute OHLC from the intraday 'close' series
+    daily = (
+        tmp.groupby(pd.Grouper(freq="1D"))["underlying_last"]
+           .agg(open="first", high="max", low="min", close="last")
+           .dropna(how="any")          # drop days with incomplete buckets
+    )
 
-    # --- derive date, sort, and aggregate to OHLC ---
-    out["__date"] = out["__ts"].dt.normalize()
-    out = out.sort_values(["__date", "__ts"])
+    # Normalize index to date and move it into a 'date' column
+    daily.index = daily.index.normalize()
+    daily = daily.rename_axis("date").reset_index()
 
-    grp = out.groupby("__date")["underlying_last"]
-    daily = pd.DataFrame({
-        "open": grp.first(),
-        "high": grp.max(),
-        "low":  grp.min(),
-        "close": grp.last(),
-    })
-
-    daily.index.name = "date"
     return daily
 
-df = pd.read_csv("../data/aapl_eod_202303.csv")
+df = pd.read_csv("data/aapl_eod_202303.csv")
 print(df)
+print(prep_index(df))
+print(ohlc_index(df))
