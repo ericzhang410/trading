@@ -1,7 +1,7 @@
 import pandas as pd
 import numpy as np
 import yfinance as yf
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt, matplotlib.ticker as mtick
 from typing import Iterable, Optional, Union, Mapping, Tuple, Literal
 
 def prep_index(df: pd.DataFrame) -> pd.DataFrame:
@@ -59,7 +59,6 @@ def yz_vol_series(
     yz_vol.name = f"rvol_{window}d"
     n = (T - h) + 1
     m = 1 / ( 1 - (h / n) + (h^2 -1)/(3*n^2))
-    print(yz_vol)
     return yz_vol
 
 def gkyz_vol_series(
@@ -102,7 +101,7 @@ def five_n_sum(
     df = prep_index(df)
     out = []
     for w in windows:
-        r_vol_ser = yz_vol_series(df, price_col=price_col, window=w, trading_days=trading_days, T=T)
+        r_vol_ser = yz_vol_series(df, price_col=price_col, window=w, trading_days=trading_days, T=T) * 100
         r_vol_ser = r_vol_ser.dropna()
         if r_vol_ser.empty:
             out.append({"horizon_days": w, "min": np.nan, "q25": np.nan, "median": np.nan,
@@ -129,21 +128,19 @@ def plot_realized_vol_cone(
     x = summary["horizon_days"].to_numpy()
 
     fig, ax = plt.subplots(figsize=(9,5))
-
-    # Distinct lines for summary statistics
     ax.plot(x, summary["min"],     color="#000000", linewidth=1.5, marker="o", markersize=0, label="Low")
     ax.plot(x, summary["q25"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.25)")
     ax.plot(x, summary["median"],  color="#4575b4", linewidth=2.0, marker="o", markersize=0, label="Median")
     ax.plot(x, summary["q75"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.75)")
     ax.plot(x, summary["max"],     color="#000000", linewidth=1.5, marker="o", markersize=0, label="Hi")
 
-    # Optional IV overlay
     if iv_curve is not None:
         iv_aligned = iv_curve.reindex(summary["horizon_days"]).interpolate().to_numpy()
         ax.plot(x, iv_aligned, color="purple", linewidth=2.0, marker="o", markersize=0, label="Implied Volatility")
 
     ax.set_xlabel("Days to Expiration)")
     ax.set_ylabel("Volatility")
+    ax.yaxis.set_major_formatter(mtick.PercentFormatter())
     ax.set_title(title, fontsize=14, fontweight="bold")
     ax.grid(True, linestyle="--", alpha=0.6)
     ax.legend(frameon=False)
@@ -151,27 +148,24 @@ def plot_realized_vol_cone(
     plt.show()
     return ax
 
-def iv_curve_from_snapshot(
-    df: pd.DataFrame,
-) -> pd.DataFrame:
-    cy = prep_index(df).copy()
-    # Coerce to numeric
-    cy["dte"]  = pd.to_numeric(cy["dte"],  errors="coerce")
-    cy["c_iv"] = pd.to_numeric(cy["c_iv"], errors="coerce")
-    cy["p_iv"] = pd.to_numeric(cy["p_iv"], errors="coerce")
+def iv_curve_from_snapshot(df1: pd.DataFrame) -> pd.DataFrame:
+    out = []
+    df = prep_index(df1).copy()
 
-    # Average call/put IVs, assuming inputs like 23.4 (%)
-    avg_iv = (cy["c_iv"] / 100 + cy["p_iv"] / 100) / 2
+    for col in ["dte", "c_iv", "p_iv", "c_delta", "p_delta"]:
+        df[col] = pd.to_numeric(df[col], errors="coerce")
 
-    # Drop bad rows
-    out = pd.DataFrame({"dte": cy["dte"], "iv": avg_iv}).dropna()
+    for dte, grp in df.groupby("dte"):
+        call_idx = (grp["c_delta"] - 0.5).abs().idxmin()
+        put_idx  = (grp["p_delta"] + 0.5).abs().idxmin()
 
-    # Round DTE to whole days and group (take median across strikes)
-    out["dte"] = out["dte"].round().astype(int)
-    curve = out.groupby("dte")["iv"].median().sort_index()
+        c_iv = grp.loc[call_idx, "c_iv"]
+        p_iv = grp.loc[put_idx,  "p_iv"]
+        atm_iv = 100* (c_iv + p_iv) / 2
 
-    # Convert to % for plotting if your cone is in percent
-    curve = 100 * curve
-    curve.index.name = "days_to_expiration"
-    curve.name = "implied_vol"
-    return curve
+        out.append({"DTE": dte, "IV": atm_iv})
+
+    s = pd.Series({row["DTE"]: row["IV"] for row in out}, name="atm_iv").sort_index()
+    s.index.name = "horizon_days"
+
+    return s
