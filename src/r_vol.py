@@ -34,5 +34,8 @@ def yz_vol_series(
 def har_rv()-> pd.DataFrame:
     return out 
 
+def id_vol_series(df: pd.DataFrame, window: int, T: int, price_col: str = "close", trading_days: int = 252, date_col: Optional[str] = None, ) -> pd.DataFrame:
+    return 0
+
 def ann_vol(df: pd.DataFrame, window: int) -> pd.DataFrame:
     return df * np.sqrt(252/window)

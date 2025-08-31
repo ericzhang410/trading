@@ -54,12 +54,12 @@ def yz_vol_series(
     rs_var = ((np.log(df["high"]/df["close"]) * np.log(df["high"]/df["open"])) 
           + (np.log(df["low"]/df["close"])  * np.log(df["low"]/df["open"])))\
           .rolling(h, min_periods=h).sum() / (h- 1)
-    k = 0.34/(1 + (h+ 1) / (h - 1))
+    k = 0.34/(1.34 + (h+ 1) / (h - 1))
     yz_vol = np.sqrt(o_var + k * c_var + (1-k)* rs_var) * np.sqrt(trading_days)
     yz_vol.name = f"rvol_{window}d"
     n = (T - h) + 1
-    m = 1 / ( 1 - (h / n) + (h^2 -1)/(3*n^2))
-    return yz_vol
+    m = 1 / ( 1 - (h / n) + (h^2 - 1)/(3 * (n^2)))
+    return yz_vol * np.sqrt(m)
 
 def gkyz_vol_series(
     df: pd.DataFrame, # I need high,low, 
@@ -128,12 +128,11 @@ def plot_realized_vol_cone(
     x = summary["horizon_days"].to_numpy()
 
     fig, ax = plt.subplots(figsize=(9,5))
-    ax.plot(x, summary["min"],     color="#000000", linewidth=1.5, marker="o", markersize=0, label="Low")
-    ax.plot(x, summary["q25"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.25)")
-    ax.plot(x, summary["median"],  color="#4575b4", linewidth=2.0, marker="o", markersize=0, label="Median")
-    ax.plot(x, summary["q75"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.75)")
     ax.plot(x, summary["max"],     color="#000000", linewidth=1.5, marker="o", markersize=0, label="Hi")
-
+    ax.plot(x, summary["q75"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.75)")
+    ax.plot(x, summary["median"],  color="#4575b4", linewidth=2.0, marker="o", markersize=0, label="Median")
+    ax.plot(x, summary["q25"],     color="#fc8d59", linewidth=1.5, marker="o", markersize=0, label="q(0.25)")
+    ax.plot(x, summary["min"],     color="#000000", linewidth=1.5, marker="o", markersize=0, label="Low")
     if iv_curve is not None:
         iv_aligned = iv_curve.reindex(summary["horizon_days"]).interpolate().to_numpy()
         ax.plot(x, iv_aligned, color="purple", linewidth=2.0, marker="o", markersize=0, label="Implied Volatility")
