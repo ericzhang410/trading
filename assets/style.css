@@ -1,0 +1,28 @@
+@import url('https://fonts.googleapis.com/css2?family=Roboto:wght@400;700&display=swap');
+
+html, body, #react-entry-point, .dash-app {
+    margin: 0 !important;
+    padding: 0 !important;
+    background-color: #0a1628 !important;
+    width: 100% !important;
+    height: 100% !important;
+}
+
+* {
+    font-family: 'Roboto', sans-serif !important;
+}
+
+h1.title {
+    font-family: 'Roboto', sans-serif !important;
+    text-align: center;
+    font-size: 42px;
+    font-weight: 700;
+    margin: 0 !important;
+    color: #ffffff;
+    letter-spacing: 0.5px;
+}
+
+label, h2, h3 {
+    color: #ffffff;
+    font-family: 'Roboto', sans-serif !important;
+}

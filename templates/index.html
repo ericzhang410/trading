@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TUZ5 - Overnight Rate Analysis</title>
+    <script src="https://cdn.plot.ly/plotly-2.27.0.min.js"></script>
+    <style>
+        * { 
+            margin: 0; 
+            padding: 0; 
+            box-sizing: border-box; 
+        }
+        
+        :root {
+            --bg-primary: #131722;
+            --bg-secondary: #1E222D;
+            --bg-tertiary: #2A2E39;
+            --bg-hover: #363A45;
+            --text-primary: #D1D4DC;
+            --text-secondary: #787B86;
+            --accent: #2962FF;
+            --accent-light: #5CBBF6;
+            --border: #2A2E39;
+        }
+
+
+        html.light-mode {
+            --bg-primary: #ffffff;
+            --bg-secondary: #f5f5f5;
+            --bg-tertiary: #efefef;
+            --bg-hover: #e0e0e0;
+            --text-primary: #000000;
+            --text-secondary: #666666;
+            --accent: #1e40af;
+            --accent-light: #3b82f6;
+            --border: #d0d0d0;
+        }
+        
+        html, body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif;
+            background: var(--bg-primary);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            transition: background 0.3s ease, color 0.3s ease;
+        }
+
+
+        /* Top Navigation Bar */
+        .top-nav {
+            background: var(--bg-secondary);
+            height: 50px;
+            display: flex;
+            align-items: center;
+            padding: 0 16px;
+            border-bottom: 1px solid var(--border);
+            justify-content: space-between;
+        }
+
+
+        .logo-section {
+            display: flex;
+            align-items: center;
+            gap: 20px;
+        }
+
+
+        .app-title {
+            font-size: 18px;
+            font-weight: 600;
+            color: var(--text-primary);
+            letter-spacing: 0.3px;
+            cursor: pointer;
+            transition: color 0.2s;
+        }
+
+
+        .app-title:hover {
+            color: var(--accent);
+        }
+
+
+        .nav-divider {
+            width: 1px;
+            height: 24px;
+            background: var(--border);
+        }
+
+
+        .chart-title {
+            font-size: 15px;
+            color: var(--text-secondary);
+            font-weight: 400;
+        }
+
+
+        .top-nav-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+
+        .view-toggle-switch {
+            display: flex;
+            align-items: center;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 4px;
+            cursor: pointer;
+        }
+
+        .switch-option {
+            padding: 6px 16px;
+            border-radius: 16px;
+            font-size: 12px;
+            font-weight: 500;
+            transition: all 0.3s;
+            background: transparent;
+            color: var(--text-secondary);
+            border: none;
+            cursor: pointer;
+        }
+
+        .switch-option.active {
+            background: var(--accent);
+            color: white;
+        }
+
+        .theme-toggle {
+            width: 48px;
+            height: 32px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 16px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            transition: all 0.3s ease;
+            padding: 2px;
+        }
+
+
+        .theme-toggle:hover {
+            background: var(--bg-hover);
+            border-color: var(--accent);
+        }
+
+
+        .theme-toggle-circle {
+            width: 26px;
+            height: 26px;
+            background: var(--accent);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+            transition: transform 0.3s ease;
+        }
+
+
+        .theme-toggle.light-mode .theme-toggle-circle {
+            transform: translateX(16px);
+        }
+
+
+        /* Main Layout */
+        .main-container {
+            display: flex;
+            height: calc(100vh - 50px);
+            gap: 0;
+        }
+
+
+        /* Left Sidebar - Calendar */
+        .sidebar {
+            width: 280px;
+            background: var(--bg-secondary);
+            border-right: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            padding: 16px;
+            overflow-y: auto;
+            flex-shrink: 0;
+        }
+
+
+        .sidebar-icon {
+            display: none;
+        }
+
+
+        /* Control Panel */
+        .control-panel {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            height: 100%;
+        }
+
+
+        .control-section {
+            margin: 0;
+        }
+
+
+        .control-label {
+            font-size: 11px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 12px;
+            display: block;
+        }
+
+
+        .radio-options {
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+        }
+
+
+        .radio-option {
+            display: flex;
+            align-items: center;
+            padding: 8px 12px;
+            background: var(--bg-tertiary);
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid transparent;
+        }
+
+
+        .radio-option:hover {
+            background: var(--bg-hover);
+            border-color: var(--border);
+        }
+
+
+        .radio-option input[type="radio"] {
+            margin-right: 10px;
+            accent-color: var(--accent);
+        }
+
+
+        .radio-option label {
+            cursor: pointer;
+            color: var(--text-primary);
+            font-size: 13px;
+        }
+
+
+        /* Custom Calendar Widget */
+        .calendar-widget {
+            background: transparent;
+            border-radius: 0;
+            padding: 0;
+            border: none;
+        }
+
+
+        .calendar-tabs {
+            display: none;
+        }
+
+
+        .calendar-view-content {
+            display: block !important;
+        }
+
+
+        .calendar-view-content.active {
+            display: block !important;
+        }
+
+
+        /* Calendar Grid View */
+        .calendar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 12px;
+        }
+
+
+        .calendar-nav {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            width: 28px;
+            height: 28px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 4px;
+            transition: all 0.2s;
+        }
+
+
+        .calendar-nav:hover {
+            background: var(--bg-hover);
+            color: var(--text-primary);
+        }
+
+
+        .calendar-month {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text-primary);
+        }
+
+
+        .calendar-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 1px;
+            margin-bottom: 12px;
+        }
+
+
+        .calendar-weekday {
+            text-align: center;
+            font-size: 10px;
+            color: var(--text-secondary);
+            padding: 4px 2px;
+            font-weight: 500;
+        }
+
+
+        .calendar-day {
+            aspect-ratio: 1;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            color: var(--text-primary);
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.2s;
+            position: relative;
+            min-width: 24px;
+        }
+
+
+        .calendar-day:hover:not(.other-month) {
+            background: var(--bg-hover);
+        }
+
+
+        .calendar-day.other-month {
+            color: #4a4a4a;
+            cursor: default;
+            font-size: 9px;
+        }
+
+
+        html.light-mode .calendar-day.other-month {
+            color: #b0b0b0;
+        }
+
+
+        .calendar-day.other-month:hover {
+            background: transparent;
+        }
+
+
+        .calendar-day.has-data {
+            background: rgba(92, 187, 246, 0.25);
+            color: var(--accent-light);
+            font-weight: 600;
+            border: 1px solid rgba(92, 187, 246, 0.4);
+        }
+
+
+        .calendar-day.has-data:hover {
+            background: rgba(92, 187, 246, 0.35);
+            border-color: rgba(92, 187, 246, 0.6);
+        }
+
+
+        .calendar-day.selected {
+            background: var(--accent);
+            color: white;
+            font-weight: 600;
+            border: 1px solid var(--accent);
+        }
+
+
+        .calendar-day.in-range {
+            background: rgba(41, 98, 255, 0.2);
+            color: var(--accent-light);
+        }
+
+
+        html.light-mode .calendar-day.in-range {
+            background: rgba(30, 64, 175, 0.15);
+            color: var(--accent);
+        }
+
+
+        .calendar-day.today {
+            border: 1px solid var(--accent);
+        }
+
+
+        /* Custom Range View */
+        .custom-range {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+
+        .date-input-group {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+
+        .date-input-label {
+            font-size: 9px;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            font-weight: 600;
+            letter-spacing: 0.5px;
+        }
+
+
+        .date-input {
+            background: var(--bg-hover);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            padding: 6px 10px;
+            color: var(--text-primary);
+            font-size: 12px;
+            transition: all 0.2s;
+        }
+
+
+        .date-input:focus {
+            outline: none;
+            border-color: var(--accent);
+            background: var(--bg-tertiary);
+        }
+
+
+        .date-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+
+        .weekday-select {
+            display: none;
+        }
+
+
+        .weekday-select select {
+            width: 100%;
+            padding: 8px 10px;
+            background: var(--bg-tertiary);
+            border: 1px solid var(--border);
+            border-radius: 4px;
+            color: var(--text-primary);
+            font-size: 12px;
+            max-height: 120px;
+        }
+
+
+        /* Chart Area */
+        .chart-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            min-width: 0;
+        }
+
+
+        /* Stats Banner */
+        .stats-banner {
+            background: var(--bg-secondary);
+            padding: 10px 16px;
+            border-bottom: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-primary);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            flex-shrink: 0;
+        }
+
+
+        .stats-label {
+            color: var(--text-secondary);
+            font-weight: 500;
+        }
+
+
+        .stats-value {
+            color: var(--text-primary);
+            font-weight: 400;
+        }
+
+
+        /* Chart Container */
+        .chart-wrapper {
+            flex: 1;
+            background: var(--bg-primary);
+            position: relative;
+            padding: 12px;
+            overflow: auto;
+            min-height: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+
+        #price-chart {
+            width: 100%;
+            height: 100%;
+            background: var(--bg-primary);
+        }
+
+        #data-table {
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+        }
+
+        #data-table table {
+            width: 100%;
+            border-collapse: collapse;
+            background: var(--bg-primary);
+        }
+
+        #data-table thead {
+            position: sticky;
+            top: 0;
+            background: var(--bg-secondary);
+            border-bottom: 1px solid var(--border);
+        }
+
+        #data-table th {
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+            color: var(--text-secondary);
+            font-size: 12px;
+            border-right: 1px solid var(--border);
+        }
+
+        #data-table th:last-child {
+            border-right: none;
+        }
+
+        #data-table td {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--border);
+            border-right: 1px solid var(--border);
+            font-size: 12px;
+            color: var(--text-primary);
+        }
+
+        #data-table td:last-child {
+            border-right: none;
+        }
+
+        #data-table tr:hover {
+            background: var(--bg-tertiary);
+        }
+
+
+        /* Floating Legend */
+        .chart-legend {
+            position: absolute;
+            top: 16px;
+            left: 16px;
+            background: rgba(30, 34, 45, 0.8);
+            backdrop-filter: blur(10px);
+            padding: 10px 14px;
+            border-radius: 6px;
+            font-size: 11px;
+            color: var(--text-primary);
+            z-index: 1000;
+            border: 1px solid var(--border);
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+        }
+
+        .legend-content {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .close-legend {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            cursor: pointer;
+            font-size: 16px;
+            padding: 0;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: color 0.2s;
+            flex-shrink: 0;
+        }
+
+        .close-legend:hover {
+            color: var(--text-primary);
+        }
+
+
+        html.light-mode .chart-legend {
+            background: rgba(255, 255, 255, 0.9);
+            border: 1px solid var(--border);
+        }
+
+
+        .legend-title {
+            font-weight: 600;
+            color: var(--accent);
+        }
+
+
+        /* Scrollbar Styling */
+        ::-webkit-scrollbar {
+            width: 6px;
+        }
+
+
+        ::-webkit-scrollbar-track {
+            background: var(--bg-secondary);
+        }
+
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--bg-tertiary);
+            border-radius: 3px;
+        }
+
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--bg-hover);
+        }
+    </style>
+</head>
+<body>
+
+
+<!-- Top Navigation -->
+<div class="top-nav">
+    <div class="logo-section">
+        <div class="app-title" id="home-link" title="Go to home">TUZ5</div>
+        <div class="nav-divider"></div>
+        <div class="chart-title">Overnight Rate Analysis</div>
+    </div>
+    <div class="view-toggle-switch">
+        <button class="switch-option active" id="switch-graph">Graph</button>
+        <button class="switch-option" id="switch-table">Table</button>
+    </div>
+    <div class="top-nav-right">
+        <div class="theme-toggle" id="theme-toggle" title="Toggle dark/light mode">
+            <div class="theme-toggle-circle">🌙</div>
+        </div>
+    </div>
+</div>
+
+
+<!-- Main Container -->
+<div class="main-container">
+    <!-- Left Sidebar - Calendar -->
+    <div class="sidebar" id="sidebar">
+        <div class="control-panel">
+            <!-- Selection Mode -->
+            <div class="control-section">
+                <label class="control-label">Selection Mode</label>
+                <div class="radio-options">
+                    <div class="radio-option">
+                        <input type="radio" name="selection-mode" value="calendar" id="mode-calendar" checked>
+                        <label for="mode-calendar">Calendar Range</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="selection-mode" value="weekday" id="mode-weekday">
+                        <label for="mode-weekday">Weekday Filter</label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Calendar -->
+            <div class="control-section" id="calendar-section">
+                <div class="calendar-widget">
+                    <div class="calendar-view-content active" id="calendar-view">
+                        <div class="calendar-header">
+                            <button class="calendar-nav" id="prev-month">‹</button>
+                            <div class="calendar-month" id="current-month">October 2025</div>
+                            <button class="calendar-nav" id="next-month">›</button>
+                        </div>
+                        
+                        <div class="calendar-grid" id="calendar-grid">
+                            <!-- Calendar will be generated here -->
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+
+            <!-- Custom Range -->
+            <div class="control-section weekday-select" id="weekday-inputs" style="display: none;">
+                <label class="control-label">Select Weekdays</label>
+                <select id="weekday-select" multiple>
+                    <option value="Monday" selected>Monday</option>
+                    <option value="Tuesday" selected>Tuesday</option>
+                    <option value="Wednesday" selected>Wednesday</option>
+                    <option value="Thursday" selected>Thursday</option>
+                    <option value="Friday" selected>Friday</option>
+                </select>
+            </div>
+
+
+            <!-- Manual Date Inputs -->
+            <div class="control-section" id="date-inputs-section" style="display: none;">
+                <div class="custom-range">
+                    <div class="date-input-group">
+                        <label class="date-input-label">Start Date</label>
+                        <input type="text" class="date-input" id="date-start-input" placeholder="mm/dd/yyyy">
+                    </div>
+                    <div class="date-input-group">
+                        <label class="date-input-label">End Date</label>
+                        <input type="text" class="date-input" id="date-end-input" placeholder="mm/dd/yyyy">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Aggregation -->
+            <div class="control-section">
+                <label class="control-label">Aggregation</label>
+                <div class="radio-options">
+                    <div class="radio-option">
+                        <input type="radio" name="agg-mode" value="none" id="agg-none">
+                        <label for="agg-none">None</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="agg-mode" value="selected" id="agg-selected" checked>
+                        <label for="agg-selected">Selected Mean/SD</label>
+                    </div>
+                    <div class="radio-option">
+                        <input type="radio" name="agg-mode" value="total" id="agg-total">
+                        <label for="agg-total">Total Mean/SD</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+    <!-- Chart Area -->
+    <div class="chart-area">
+        <!-- Stats Banner -->
+        <div class="stats-banner">
+            <span class="stats-label">Status:</span>
+            <span class="stats-value" id="stats-output">Loading data...</span>
+        </div>
+
+
+        <!-- Chart Wrapper -->
+        <div class="chart-wrapper">
+            <div class="chart-legend" id="chart-legend">
+                <div class="legend-content">
+                    <div class="legend-title" id="legend-title">TUZ5 Overnight Rate</div>
+                    <div>Blue dates have trading data available</div>
+                </div>
+                <button class="close-legend" id="close-legend">×</button>
+            </div>
+            <div id="price-chart"></div>
+            <div id="data-table" style="display: none;"></div>
+        </div>
+    </div>
+</div>
+
+
+<script>
+// Get ticker from URL query parameter or default to TUZ5
+const urlParams = new URLSearchParams(window.location.search);
+const TICKER = urlParams.get('ticker') || 'TUZ5';
+
+
+const TICKER_NAMES = {
+    'TUZ5': '2 Year',
+    'FVZ5': '5 Year',
+    'TYZ5': '10 Year'
+};
+
+
+const state = {
+    selectionMode: 'calendar',
+    startDate: null,
+    endDate: null,
+    selectingRange: false,
+    tempStartDate: null,
+    selectedWeekdays: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday'],
+    aggMode: 'selected',
+    currentMonth: new Date(),
+    tradingDays: new Set(),
+    darkMode: true,
+    currentChartData: null,
+    legendVisible: true
+};
+
+
+// Update page title and header
+document.title = `${TICKER} - Overnight Rate Analysis`;
+document.getElementById('home-link').textContent = TICKER;
+document.getElementById('legend-title').textContent = `${TICKER} Overnight Rate`;
+
+
+// Home link
+document.getElementById('home-link').addEventListener('click', () => {
+    window.location.href = '/';
+});
+
+
+// Close legend button
+document.getElementById('close-legend').addEventListener('click', () => {
+    state.legendVisible = false;
+    document.getElementById('chart-legend').style.display = 'none';
+});
+
+
+// View Toggle Switch
+document.getElementById('switch-graph').addEventListener('click', () => {
+    document.getElementById('switch-graph').classList.add('active');
+    document.getElementById('switch-table').classList.remove('active');
+    document.getElementById('price-chart').style.display = 'block';
+    document.getElementById('data-table').style.display = 'none';
+});
+
+document.getElementById('switch-table').addEventListener('click', () => {
+    document.getElementById('switch-table').classList.add('active');
+    document.getElementById('switch-graph').classList.remove('active');
+    document.getElementById('price-chart').style.display = 'none';
+    document.getElementById('data-table').style.display = 'block';
+    renderTable();
+});
+
+
+// Theme Toggle
+const themeToggle = document.getElementById('theme-toggle');
+const html = document.documentElement;
+
+
+if (localStorage.getItem('theme') === 'light') {
+    state.darkMode = false;
+    html.classList.add('light-mode');
+    themeToggle.classList.add('light-mode');
+    themeToggle.querySelector('.theme-toggle-circle').textContent = '☀️';
+}
+
+
+themeToggle.addEventListener('click', () => {
+    state.darkMode = !state.darkMode;
+    
+    if (state.darkMode) {
+        html.classList.remove('light-mode');
+        themeToggle.classList.remove('light-mode');
+        themeToggle.querySelector('.theme-toggle-circle').textContent = '🌙';
+        localStorage.setItem('theme', 'dark');
+    } else {
+        html.classList.add('light-mode');
+        themeToggle.classList.add('light-mode');
+        themeToggle.querySelector('.theme-toggle-circle').textContent = '☀️';
+        localStorage.setItem('theme', 'light');
+    }
+    updateChart();
+});
+
+
+// Date formatting utilities
+function formatDateISO(date) {
+    if (typeof date === 'string') return date;
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
+
+
+function formatDateDisplay(dateStr) {
+    if (!dateStr) return '';
+    const [year, month, day] = dateStr.split('-');
+    return `${month}/${day}/${year}`;
+}
+
+function parseDisplayDate(displayStr) {
+    if (!displayStr) return null;
+    const parts = displayStr.split('/');
+    if (parts.length !== 3) return null;
+    const [month, day, year] = parts;
+    return `${year}-${month.padStart(2, '0')}-${day.padStart(2, '0')}`;
+}
+
+
+function renderTable() {
+    if (!state.currentChartData?.traces?.[0]) {
+        document.getElementById('data-table').innerHTML = '<div style="padding: 20px; color: var(--text-secondary);">No data available</div>';
+        return;
+    }
+
+
+    // Collect all data points from all traces
+    let allRows = [];
+    const traces = state.currentChartData.traces;
+    
+    for (let traceIdx = 0; traceIdx < traces.length; traceIdx++) {
+        const trace = traces[traceIdx];
+        
+        // Skip aggregate traces (mean/SD lines)
+        if (trace.name && (trace.name.includes('Mean') || trace.name.includes('±1SD'))) {
+            continue;
+        }
+        
+        // Collect each data point
+        for (let i = 0; i < (trace.x || []).length; i++) {
+            const time = trace.x[i].substring(11, 16);  // Extract HH:MM
+            const fullDateTime = trace.x[i];  // Full datetime for sorting
+            const tradingDay = trace.customdata ? trace.customdata[i] : 'N/A';
+            
+            // SKIP N/A dates
+            if (tradingDay === 'N/A') {
+                continue;
+            }
+            
+            const relativePrice = (trace.y[i] || 0).toFixed(6);
+            const price = (trace.actual_prices && trace.actual_prices[i] !== undefined) 
+                ? trace.actual_prices[i].toFixed(6) 
+                : (trace.y[i] || 0).toFixed(6);
+            
+            allRows.push({
+                time: time,
+                fullDateTime: fullDateTime,
+                tradingDay: tradingDay,
+                relativePrice: relativePrice,
+                price: price
+            });
+        }
+    }
+    
+    // Sort by trading day THEN by time chronologically
+    allRows.sort((a, b) => {
+        // First sort by trading day
+        if (a.tradingDay !== b.tradingDay) {
+            return a.tradingDay.localeCompare(b.tradingDay);
+        }
+        // Then sort by time
+        return a.fullDateTime.localeCompare(b.fullDateTime);
+    });
+    
+    // Build table HTML
+    let html = '<table><thead><tr><th>Time</th><th>Trading Day</th><th>Relative Price</th><th>Price</th></tr></thead><tbody>';
+    
+    for (let i = 0; i < allRows.length; i++) {
+        html += `<tr><td>${allRows[i].time}</td><td>${allRows[i].tradingDay}</td><td>${allRows[i].relativePrice}</td><td>${allRows[i].price}</td></tr>`;
+    }
+    
+    html += '</tbody></table>';
+    document.getElementById('data-table').innerHTML = html;
+    
+    // Auto-scroll table to top
+    const tableContainer = document.getElementById('data-table');
+    if (tableContainer) {
+        tableContainer.scrollTop = 0;
+    }
+}
+
+// Calendar class
+class Calendar {
+    constructor() {
+        this.monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+        this.dayNames = ['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su'];
+        this.init();
+    }
+
+
+    init() {
+        this.bindEvents();
+        this.loadTradingDays();
+    }
+
+
+    bindEvents() {
+        document.getElementById('prev-month').addEventListener('click', () => {
+            state.currentMonth.setMonth(state.currentMonth.getMonth() - 1);
+            this.render();
+        });
+
+
+        document.getElementById('next-month').addEventListener('click', () => {
+            state.currentMonth.setMonth(state.currentMonth.getMonth() + 1);
+            this.render();
+        });
+
+
+        document.getElementById('date-start-input').addEventListener('change', (e) => {
+            const startDate = parseDisplayDate(e.target.value);
+            if (startDate) {
+                state.startDate = startDate;
+                this.render();
+                updateChart();
+            }
+        });
+
+
+        document.getElementById('date-end-input').addEventListener('change', (e) => {
+            const endDate = parseDisplayDate(e.target.value);
+            if (endDate) {
+                state.endDate = endDate;
+                this.render();
+                updateChart();
+            }
+        });
+    }
+
+
+    async loadTradingDays() {
+        try {
+            const response = await fetch(`/api/trading-days?ticker=${TICKER}`);
+            if (response.ok) {
+                const data = await response.json();
+                state.tradingDays = new Set(data.trading_days);
+                
+                if (state.tradingDays.size > 0) {
+                    const sortedDays = Array.from(state.tradingDays).sort();
+                    state.startDate = sortedDays[sortedDays.length - 1];
+                    state.endDate = state.startDate;
+                }
+            } else {
+                this.generateSampleTradingDays();
+            }
+        } catch (error) {
+            console.log('Could not load trading days');
+            this.generateSampleTradingDays();
+        }
+        
+        this.render();
+        updateChart();
+    }
+
+
+    generateSampleTradingDays() {
+        const today = new Date();
+        for (let i = -180; i <= 90; i++) {
+            const date = new Date(today);
+            date.setDate(date.getDate() + i);
+            const dayOfWeek = date.getDay();
+            if (dayOfWeek !== 0 && dayOfWeek !== 6) {
+                state.tradingDays.add(formatDateISO(date));
+            }
+        }
+        const sortedDays = Array.from(state.tradingDays).sort();
+        state.startDate = sortedDays[sortedDays.length - 1];
+        state.endDate = state.startDate;
+    }
+
+
+    render() {
+        const grid = document.getElementById('calendar-grid');
+        const monthHeader = document.getElementById('current-month');
+        
+        const year = state.currentMonth.getFullYear();
+        const month = state.currentMonth.getMonth();
+        
+        monthHeader.textContent = `${this.monthNames[month]} ${year}`;
+        grid.innerHTML = '';
+        
+        this.dayNames.forEach(day => {
+            const weekday = document.createElement('div');
+            weekday.className = 'calendar-weekday';
+            weekday.textContent = day;
+            grid.appendChild(weekday);
+        });
+        
+        const firstDay = new Date(year, month, 1);
+        const lastDay = new Date(year, month + 1, 0);
+        const daysInMonth = lastDay.getDate();
+        
+        let startDay = firstDay.getDay();
+        startDay = startDay === 0 ? 6 : startDay - 1;
+        
+        const today = new Date();
+        const todayStr = formatDateISO(today);
+        
+        for (let i = 0; i < startDay; i++) {
+            const prevDate = new Date(year, month, 1 - startDay + i);
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day other-month';
+            dayElement.textContent = prevDate.getDate();
+            grid.appendChild(dayElement);
+        }
+        
+        for (let day = 1; day <= daysInMonth; day++) {
+            const date = new Date(year, month, day);
+            const dateStr = formatDateISO(date);
+            const dayElement = document.createElement('div');
+            
+            dayElement.className = 'calendar-day';
+            dayElement.textContent = day;
+            
+            if (state.tradingDays.has(dateStr)) {
+                dayElement.classList.add('has-data');
+            }
+            
+            if (dateStr === todayStr) {
+                dayElement.classList.add('today');
+            }
+            
+            if (state.startDate && state.endDate) {
+                const startTime = new Date(state.startDate).getTime();
+                const endTime = new Date(state.endDate).getTime();
+                const currentTime = new Date(dateStr).getTime();
+                
+                if (dateStr === state.startDate || dateStr === state.endDate) {
+                    dayElement.classList.add('selected');
+                } else if (currentTime > startTime && currentTime < endTime) {
+                    dayElement.classList.add('in-range');
+                }
+            }
+            
+            dayElement.addEventListener('click', () => {
+                if (state.tradingDays.has(dateStr)) {
+                    if (!state.selectingRange) {
+                        state.tempStartDate = dateStr;
+                        state.startDate = dateStr;
+                        state.selectingRange = true;
+                    } else {
+                        const start = new Date(state.tempStartDate).getTime();
+                        const end = new Date(dateStr).getTime();
+                        
+                        if (end < start) {
+                            state.startDate = dateStr;
+                            state.endDate = state.tempStartDate;
+                        } else {
+                            state.startDate = state.tempStartDate;
+                            state.endDate = dateStr;
+                        }
+                        
+                        state.selectingRange = false;
+                        document.getElementById('date-start-input').value = formatDateDisplay(state.startDate);
+                        document.getElementById('date-end-input').value = formatDateDisplay(state.endDate);
+                        updateChart();
+                    }
+                    this.render();
+                }
+            });
+            
+            grid.appendChild(dayElement);
+        }
+        
+        const totalCells = Math.ceil((startDay + daysInMonth) / 7) * 7;
+        const remainingCells = totalCells - startDay - daysInMonth;
+        
+        for (let day = 1; day <= remainingCells; day++) {
+            const nextDate = new Date(year, month + 1, day);
+            const dayElement = document.createElement('div');
+            dayElement.className = 'calendar-day other-month';
+            dayElement.textContent = day;
+            grid.appendChild(dayElement);
+        }
+        
+        if (state.startDate) {
+            document.getElementById('date-start-input').value = formatDateDisplay(state.startDate);
+        }
+        if (state.endDate) {
+            document.getElementById('date-end-input').value = formatDateDisplay(state.endDate);
+        }
+    }
+}
+
+
+let calendar;
+
+
+async function init() {
+    calendar = new Calendar();
+    
+    document.querySelectorAll('input[name="selection-mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.selectionMode = e.target.value;
+            document.getElementById('calendar-section').style.display = 
+                state.selectionMode === 'calendar' ? 'block' : 'none';
+            document.getElementById('weekday-inputs').style.display = 
+                state.selectionMode === 'weekday' ? 'block' : 'none';
+            updateChart();
+        });
+    });
+    
+    document.querySelectorAll('input[name="agg-mode"]').forEach(radio => {
+        radio.addEventListener('change', (e) => {
+            state.aggMode = e.target.value;
+            updateChart();
+        });
+    });
+    
+    document.getElementById('weekday-select').addEventListener('change', (e) => {
+        state.selectedWeekdays = Array.from(e.target.selectedOptions).map(opt => opt.value);
+        updateChart();
+    });
+}
+
+
+async function updateChart() {
+    const params = new URLSearchParams({
+        selection_mode: state.selectionMode,
+        agg_mode: state.aggMode,
+        ticker: TICKER
+    });
+    
+    if (state.selectionMode === 'calendar') {
+        params.append('start_date', state.startDate);
+        params.append('end_date', state.endDate);
+    } else {
+        params.append('weekdays', state.selectedWeekdays.join(','));
+    }
+    
+    try {
+        const response = await fetch(`/api/chart-data?${params}`);
+        
+        if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`);
+        }
+        
+        const result = await response.json();
+        state.currentChartData = result.data;
+        document.getElementById('stats-output').textContent = result.stats.description;
+        
+        if (result.data && result.data.traces && result.data.traces.length > 0) {
+            const bgColor = state.darkMode ? '#131722' : '#ffffff';
+            const textColor = state.darkMode ? '#787B86' : '#666666';
+            const gridColor = state.darkMode ? '#1E222D' : '#e0e0e0';
+            
+            const layout = {
+                ...result.data.layout,
+                paper_bgcolor: bgColor,
+                plot_bgcolor: bgColor,
+                font: {
+                    family: '-apple-system, BlinkMacSystemFont, "Trebuchet MS", Roboto, Ubuntu, sans-serif',
+                    color: textColor,
+                    size: 12
+                },
+                xaxis: {
+                    ...result.data.layout.xaxis,
+                    gridcolor: gridColor,
+                    color: textColor
+                },
+                yaxis: {
+                    ...result.data.layout.yaxis,
+                    gridcolor: gridColor,
+                    color: textColor
+                },
+                margin: { l: 50, r: 20, t: 20, b: 40 },
+                hovermode: false
+            };
+            
+            Plotly.newPlot('price-chart', result.data.traces, layout, {
+                responsive: true,
+                displayModeBar: false
+            });
+
+            setTimeout(() => {
+            Plotly.Plots.resize('price-chart');
+            }, 100);
+        } else {
+            document.getElementById('price-chart').innerHTML = 
+                '<div style="padding: 2em; color: ' + (state.darkMode ? '#787B86' : '#666666') + '; text-align: center;">No data available</div>';
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        document.getElementById('stats-output').textContent = 'Error loading data';
+    }
+}
+
+
+document.addEventListener('DOMContentLoaded', init);
+</script>
+
+
+</body>
+</html>
